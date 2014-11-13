@@ -35,7 +35,7 @@
 #define SPARE_CLOCK    SI5351_CLK1
 
 // Default output frequency
-#define RX_FREQ 7100000
+#define RX_FREQ 7150000
 #define TX_FREQ 27001500
 
 // Other settings
@@ -147,7 +147,20 @@ void loop(){
 //
 
 void read_rx_freq(){
-    // TODO  
+    while(Serial.available()>0){ Serial.read();} // Flush the input buffer
+    Serial.print("Enter Frequency in kHz (XXXXX): ");
+    while(Serial.available()<7){}
+    int temp_freq = Serial.parseInt();
+    if(temp_freq<30000 && temp_freq>100){
+        uint32_t temp_freq2 = (uint32_t)temp_freq * 1000L;
+        set_rx_freq(temp_freq2);
+            Serial.println("");
+    Serial.print("Frequency set to ");
+    Serial.println(rx_freq);
+    }else{
+        Serial.println("Invalid frequency.");
+    }
+
 }
 
 void read_tx_freq(){
