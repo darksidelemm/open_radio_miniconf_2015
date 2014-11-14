@@ -35,8 +35,11 @@
 #define SPARE_CLOCK    SI5351_CLK1
 
 // Default output frequency
-#define RX_FREQ 7150000
-#define TX_FREQ 27001500
+#define RX_FREQ 27000000
+#define TX_FREQ 27000000
+
+#define UPPER_LIMIT 30000000
+#define LOWER_LIMIT 100000
 
 // Other settings
 #define SERIAL_BAUD     57600
@@ -102,6 +105,8 @@ void loop(){
     Serial.println("5: Toggle TX State.");
     Serial.println("6: Set Message.");
     Serial.println("7: Start BPSK31 Terminal");
+    Serial.println("8: RX VFO Mode");
+    Serial.println("9: Calibration Mode");
     
     while(Serial.available()==0){} // Wait for input
     
@@ -135,6 +140,12 @@ void loop(){
         case '7':
             pskTerminal(31);
             break;
+        case '8':
+            rx_vfo();
+            break;
+        case '9':
+            calibrate();
+            break;
         default:
             break;
     }
@@ -146,6 +157,7 @@ void loop(){
 // Menu Helper Functions
 //
 
+// Prompt user for a RX frequency.
 void read_rx_freq(){
     while(Serial.available()>0){ Serial.read();} // Flush the input buffer
     Serial.print("Enter Frequency in kHz (XXXXX): ");
@@ -163,8 +175,95 @@ void read_rx_freq(){
 
 }
 
+// Prompt user for a TX frequency.
 void read_tx_freq(){
-    //TODO
+    while(Serial.available()>0){ Serial.read();} // Flush the input buffer
+    Serial.print("Enter Frequency in kHz (XXXXX): ");
+    while(Serial.available()<7){}
+    int temp_freq = Serial.parseInt();
+    if(temp_freq<30000 && temp_freq>100){
+        uint32_t temp_freq2 = (uint32_t)temp_freq * 1000L;
+        set_tx_freq(temp_freq2);
+            Serial.println("");
+    Serial.print("Frequency set to ");
+    Serial.println(tx_freq);
+    }else{
+        Serial.println("Invalid frequency.");
+    }
+}
+
+// Interactive receive tuning mode.
+void rx_vfo(){
+    Serial.println("RX VFO Mode, press q to exit.\n");
+
+    Serial.println("    Up: r   t    y    u    i    o    p");
+    Serial.println("  Down: f   g    h    j    k    l    ;");
+    Serial.println("Amount: 1   10  100   1K   10K 100K  1M");
+
+    while(1){
+        if(Serial.available()>0){
+            char c = Serial.read();
+            if(c=='q') break;
+
+            uint32_t temp = rx_freq;
+            if(c=='r'){         temp += 1;
+            }else if(c=='f'){   temp -= 1;
+            }else if(c=='t'){   temp += 10;
+            }else if(c=='g'){   temp -= 10;
+            }else if(c=='y'){   temp += 100;
+            }else if(c=='h'){   temp -= 100;
+            }else if(c=='u'){   temp += 1000;
+            }else if(c=='j'){   temp -= 1000;
+            }else if(c=='i'){   temp += 10000;
+            }else if(c=='k'){   temp -= 10000;
+            }else if(c=='o'){   temp += 100000;
+            }else if(c=='l'){   temp -= 100000;
+            }else if(c=='p'){   temp += 1000000;
+            }else if(c==';'){   temp -= 1000000;
+            }else{// Do nothing
+            }
+
+            if(temp< UPPER_LIMIT && temp > LOWER_LIMIT){
+                set_rx_freq(temp);
+            }else{
+                Serial.print("Out of range.");
+            }
+            Serial.print("RX Center Freq:"); Serial.println(rx_freq);
+        }
+    }
+}
+
+// Interactive calibration tuning mode.
+void calibrate(){
+    Serial.println("Calibration Mode, press q to exit.\n");
+    Serial.println("    Up: r   t    y");
+    Serial.println("  Down: f   g    h ");
+    Serial.println("Amount: 1   10  100");
+
+    int32_t cal_val = si5351.get_correction();
+    Serial.print("Current Correction Value: "); Serial.println(cal_val);
+
+    while(1){
+        if(Serial.available()>0){
+            char c = Serial.read();
+            if(c=='q') break;
+
+            uint32_t temp = cal_val;
+            if(c=='r'){         temp += 1;
+            }else if(c=='f'){   temp -= 1;
+            }else if(c=='t'){   temp += 10;
+            }else if(c=='g'){   temp -= 10;
+            }else if(c=='y'){   temp += 100;
+            }else if(c=='h'){   temp -= 100;
+            }else{// Do nothing
+            }
+            si5351.set_correction(temp);
+            set_rx_freq(rx_freq);
+            cal_val = si5351.get_correction();
+            Serial.print("Correction:"); Serial.println(cal_val);
+        }
+    }
+    Serial.println("Correction value saved to Si5351 EEPROM.");
 }
 
 void toggle_tx_relay(){
@@ -282,13 +381,14 @@ uint8_t si5351_init(){
 
 // Quadrature mixer requires a 4X LO signal.
 void set_rx_freq(uint32_t freq){
-  si5351.set_freq(freq*4, SI5351_PLL_FIXED, RX_CLOCK);
-  rx_freq = freq;
+    si5351.set_freq(freq*4, SI5351_PLL_FIXED, RX_CLOCK);
+    rx_freq = freq;
 }
 
 void set_tx_freq(uint32_t freq){
-  si5351.set_freq(freq, SI5351_PLL_FIXED, TX_CLOCK);
-  tx_freq = freq;
+    // Let driver choose PLL settings. May glitch when changing frequencies.
+    si5351.set_freq(freq, 0, TX_CLOCK);
+    tx_freq = freq;
 }
 
 void tx_enable(){
