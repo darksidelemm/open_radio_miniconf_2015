@@ -54,11 +54,8 @@ int tx_state = 0;
 uint32_t rx_freq = RX_FREQ;
 uint32_t tx_freq = TX_FREQ;
 
-
-char relaymessage[40] = "Nothing set";
-
 // Ring buffer for use with the interrupt-driven transmit buffer.
-#define TX_BUFFER_SIZE  128
+#define TX_BUFFER_SIZE  64
 struct ring_buffer
 {
   unsigned char buffer[TX_BUFFER_SIZE];
@@ -79,9 +76,9 @@ void setup(){
     digitalWrite(LED, LOW);
 
     Serial.begin(SERIAL_BAUD);
-    Serial.print("Starting up Si5351... ");
+    Serial.print(F("Starting up Si5351... "));
     uint8_t rev_id = si5351_init();
-    Serial.print("Got Rev ID ");
+    Serial.print(F("Got Rev ID "));
     Serial.println(rev_id);
 
     // Click the relay as an 'audible' startup indicator.
@@ -98,15 +95,14 @@ void loop(){
     print_state();
     Serial.println("");
     Serial.println("MENU:");
-    Serial.println("1: View current settings.");
-    Serial.println("2: Change RX Frequency.");
-    Serial.println("3: Change TX Frequency.");
-    Serial.println("4: Toggle TX/RX Relay.");
-    Serial.println("5: Toggle TX State.");
-    Serial.println("6: Set Message.");
-    Serial.println("7: Start BPSK31 Terminal");
-    Serial.println("8: RX VFO Mode");
-    Serial.println("9: Calibration Mode");
+    Serial.println(F("1: View current settings."));
+    Serial.println(F("2: Change RX Frequency."));
+    Serial.println(F("3: Change TX Frequency."));
+    Serial.println(F("4: Toggle TX/RX Relay."));
+    Serial.println(F("5: Toggle TX State."));
+    Serial.println(F("6: Start BPSK31 Terminal"));
+    Serial.println(F("7: RX VFO Mode"));
+    Serial.println(F("8: Calibration Mode"));
     
     while(Serial.available()==0){} // Wait for input
     
@@ -135,15 +131,12 @@ void loop(){
             toggle_tx();
             break;
         case '6':
-            read_message();
-            break;
-        case '7':
             pskTerminal(31);
             break;
-        case '8':
+        case '7':
             rx_vfo();
             break;
-        case '9':
+        case '8':
             calibrate();
             break;
         default:
@@ -160,17 +153,17 @@ void loop(){
 // Prompt user for a RX frequency.
 void read_rx_freq(){
     while(Serial.available()>0){ Serial.read();} // Flush the input buffer
-    Serial.print("Enter Frequency in kHz (XXXXX): ");
+    Serial.print(F("Enter Frequency in kHz (XXXXX): "));
     while(Serial.available()<7){}
     int temp_freq = Serial.parseInt();
     if(temp_freq<30000 && temp_freq>100){
         uint32_t temp_freq2 = (uint32_t)temp_freq * 1000L;
         set_rx_freq(temp_freq2);
             Serial.println("");
-    Serial.print("Frequency set to ");
+    Serial.print(F("Frequency set to "));
     Serial.println(rx_freq);
     }else{
-        Serial.println("Invalid frequency.");
+        Serial.println(F("Invalid frequency."));
     }
 
 }
@@ -178,27 +171,27 @@ void read_rx_freq(){
 // Prompt user for a TX frequency.
 void read_tx_freq(){
     while(Serial.available()>0){ Serial.read();} // Flush the input buffer
-    Serial.print("Enter Frequency in kHz (XXXXX): ");
+    Serial.print(F("Enter Frequency in kHz (XXXXX): "));
     while(Serial.available()<7){}
     int temp_freq = Serial.parseInt();
     if(temp_freq<30000 && temp_freq>100){
         uint32_t temp_freq2 = (uint32_t)temp_freq * 1000L;
         set_tx_freq(temp_freq2);
             Serial.println("");
-    Serial.print("Frequency set to ");
+    Serial.print(F("Frequency set to "));
     Serial.println(tx_freq);
     }else{
-        Serial.println("Invalid frequency.");
+        Serial.println(F("Invalid frequency."));
     }
 }
 
 // Interactive receive tuning mode.
 void rx_vfo(){
-    Serial.println("RX VFO Mode, press q to exit.\n");
+    Serial.println(F("RX VFO Mode, press q to exit.\n"));
 
-    Serial.println("    Up: r   t    y    u    i    o    p");
-    Serial.println("  Down: f   g    h    j    k    l    ;");
-    Serial.println("Amount: 1   10  100   1K   10K 100K  1M");
+    Serial.println(F("    Up: r   t    y    u    i    o    p"));
+    Serial.println(F("  Down: f   g    h    j    k    l    ;"));
+    Serial.println(F("Amount: 1   10  100   1K   10K 100K  1M"));
 
     while(1){
         if(Serial.available()>0){
@@ -235,13 +228,13 @@ void rx_vfo(){
 
 // Interactive calibration tuning mode.
 void calibrate(){
-    Serial.println("Calibration Mode, press q to exit.\n");
-    Serial.println("    Up: r   t    y");
-    Serial.println("  Down: f   g    h ");
-    Serial.println("Amount: 1   10  100");
+    Serial.println(F("Calibration Mode, press q to exit.\n"));
+    Serial.println(F("    Up: r   t    y"));
+    Serial.println(F("  Down: f   g    h "));
+    Serial.println(F("Amount: 1   10  100"));
 
     int32_t cal_val = si5351.get_correction();
-    Serial.print("Current Correction Value: "); Serial.println(cal_val);
+    Serial.print(F("Current Correction Value: ")); Serial.println(cal_val);
 
     while(1){
         if(Serial.available()>0){
@@ -263,7 +256,7 @@ void calibrate(){
             Serial.print("Correction:"); Serial.println(cal_val);
         }
     }
-    Serial.println("Correction value saved to Si5351 EEPROM.");
+    Serial.println(F("Correction value saved to Si5351 EEPROM."));
 }
 
 void toggle_tx_relay(){
@@ -283,9 +276,9 @@ void toggle_tx(){
 }
 
 void print_state(){
-    Serial.print("\nReceive Center Frequency (Hz): "); Serial.println(rx_freq);
-    Serial.print("Transmit Frequency (Hz): "); Serial.println(tx_freq);
-    Serial.print("TX/RX Relay State: ");
+    Serial.print(F("\nReceive Center Frequency (Hz): ")); Serial.println(rx_freq);
+    Serial.print(F("Transmit Frequency (Hz): ")); Serial.println(tx_freq);
+    Serial.print(F("TX/RX Relay State: "));
     if(tx_relay_state){
         Serial.println("TX");
     }else{
@@ -298,29 +291,9 @@ void print_state(){
     }else{
         Serial.println("OFF");
     }
-    Serial.print("Message: "); Serial.println(relaymessage);
 }
 
-void read_message(){
-    while(Serial.available()>0){ Serial.read();} // Flush the input buffer
-    Serial.print("Enter message, then LF: ");
-    int i = 0;
-    while(1){
-        while(Serial.available()==0){} // Wait for a character
-        char temp = Serial.read();
-        if(temp == '\n' || temp == '\r'){
-            relaymessage[i] = 0;
-            Serial.println("");
-            Serial.print("New Message: ");
-            Serial.println(relaymessage);
-            return;
-        }else{
-            relaymessage[i] = temp;
-        }
-        i++;
-    }
-}
-
+/*
 void tx_bpsk31(){
     tx();
     tx_enable();
@@ -334,11 +307,11 @@ void tx_bpsk31(){
     tx_disable();
     rx();
 }
-
+*/
 int pskTerminal(int baud_rate){
     char* endptr;
     uint8_t exit_count = 0;
-    Serial.println("Starting BPSK31 Terminal. Press ` to exit.");
+    Serial.println(F("Starting BPSK31 Terminal. Press ` to exit."));
     tx();
     tx_enable();
     bpsk_start(baud_rate);
@@ -351,6 +324,7 @@ int pskTerminal(int baud_rate){
             store_char(c,&data_tx_buffer); // Add the character to the transmit ring buffer.
         }
     }
+    while(data_waiting(&data_tx_buffer)>0){}
     delay(500);
     bpsk_stop();
     tx_disable();
