@@ -9,20 +9,16 @@ To start, we'll be working on code for the transmit side of the radio, which use
 Building the Sketch
 ===================
 
-Download arduino 1.0.6
-
-debian: apt-get install arduino
-CentOS: yum install arduino
-
-other: get the arduino IDE from http://arduino.cc
-
-Run the IDE from this directory and open the 'openradio_interactive/openradio_interactive.ino  file from within the IDE.
-
-From the Tools -> Board menu, select "Arduino Nano w/ATmega 328"
-
-Click Verify (The tick button underneath the menubar), and it should say something along the lines of:
-
+1. Download arduino 1.0.6
+ * Debian/Ubuntu: ```apt-get install arduino```
+ * CentOS/Red Hat: ```yum install arduino```
+ * other: get the arduino IDE from http://arduino.cc
+2. Run the IDE from this directory and open the ```openradio_interactive/openradio_interactive.ino``` file from within the IDE.
+3. From the Tools -> Board menu, select ```Arduino Nano w/ATmega 328```
+4. Click Verify (The tick button underneath the menubar), and it should say something along the lines of:
+```
 Binary sketch size: 14,598 bytes (of a 32,256 byte maximum)
+```
 
 Uploading the Sketch
 ====================
