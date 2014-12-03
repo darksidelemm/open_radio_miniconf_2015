@@ -76,6 +76,7 @@ void setup(){
     digitalWrite(LED, LOW);
 
     Serial.begin(SERIAL_BAUD);
+    Serial.setTimeout(1000 * 10);
     Serial.print(F("Starting up Si5351... "));
     uint8_t rev_id = si5351_init();
     Serial.print(F("Got Rev ID "));
@@ -150,39 +151,62 @@ void loop(){
 // Menu Helper Functions
 //
 
+static int32_t get_freq(void)
+{
+    int32_t freq;
+
+    // Flush the input buffer
+    while (Serial.available() > 0)
+        Serial.read();
+
+    Serial.print(F("Enter Frequency in kHz: "));
+    freq = Serial.parseInt();
+    Serial.println(freq);
+
+    while (Serial.available() > 0)
+        Serial.read();
+
+    if (freq < 30000 && freq > 100)
+        return freq * 1000;
+
+    Serial.println("Error");
+
+    return -1;
+}
+
+static void show_freq(int32_t freq)
+{
+    Serial.print(F("\r\nFrequency set to "));
+    Serial.print(freq);
+    Serial.println(F(" Hz"));
+}
+
 // Prompt user for a RX frequency.
-void read_rx_freq(){
-    while(Serial.available()>0){ Serial.read();} // Flush the input buffer
-    Serial.print(F("Enter Frequency in kHz (XXXXX): "));
-    while(Serial.available()<7){}
-    int temp_freq = Serial.parseInt();
-    if(temp_freq<30000 && temp_freq>100){
-        uint32_t temp_freq2 = (uint32_t)temp_freq * 1000L;
-        set_rx_freq(temp_freq2);
-            Serial.println("");
-    Serial.print(F("Frequency set to "));
-    Serial.println(rx_freq);
-    }else{
+static void read_rx_freq(void)
+{
+    int32_t freq = get_freq();
+
+    if (freq <= 0) {
         Serial.println(F("Invalid frequency."));
+        return;
     }
 
+    set_rx_freq(freq);
+    show_freq(rx_freq);
 }
 
 // Prompt user for a TX frequency.
-void read_tx_freq(){
-    while(Serial.available()>0){ Serial.read();} // Flush the input buffer
-    Serial.print(F("Enter Frequency in kHz (XXXXX): "));
-    while(Serial.available()<7){}
-    int temp_freq = Serial.parseInt();
-    if(temp_freq<30000 && temp_freq>100){
-        uint32_t temp_freq2 = (uint32_t)temp_freq * 1000L;
-        set_tx_freq(temp_freq2);
-            Serial.println("");
-    Serial.print(F("Frequency set to "));
-    Serial.println(tx_freq);
-    }else{
+static void read_tx_freq(void)
+{
+    int32_t freq = get_freq();
+
+    if (freq <= 0) {
         Serial.println(F("Invalid frequency."));
+        return;
     }
+
+    set_tx_freq(freq);
+    show_freq(tx_freq);
 }
 
 // Interactive receive tuning mode.
