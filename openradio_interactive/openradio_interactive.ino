@@ -262,7 +262,8 @@ static void rx_vfo(void)
 }
 
 // Interactive calibration tuning mode.
-void calibrate(){
+static void calibrate(void)
+{
     Serial.println(F("Calibration Mode, press q to exit.\n"));
     Serial.println(F("    Up: r   t    y"));
     Serial.println(F("  Down: f   g    h "));
@@ -271,24 +272,30 @@ void calibrate(){
     int32_t cal_val = si5351.get_correction();
     Serial.print(F("Current Correction Value: ")); Serial.println(cal_val);
 
-    while(1){
-        if(Serial.available()>0){
+    while(1) {
+        if (Serial.available() > 0) {
             char c = Serial.read();
-            if(c=='q') break;
 
-            uint32_t temp = cal_val;
-            if(c=='r'){         temp += 1;
-            }else if(c=='f'){   temp -= 1;
-            }else if(c=='t'){   temp += 10;
-            }else if(c=='g'){   temp -= 10;
-            }else if(c=='y'){   temp += 100;
-            }else if(c=='h'){   temp -= 100;
-            }else{// Do nothing
+            int32_t delta;
+
+            switch (c) {
+            case 'q':
+                flush_input();
+                return;
+            case 'r': delta = 1; break;
+            case 'f': delta = -1; break;
+            case 't': delta = 10; break;
+            case 'g': delta = -10; break;
+            case 'y': delta = 100; break;
+            case 'h': delta = -100; break;
+            default:
+                      break;
             }
-            si5351.set_correction(temp);
+
+            si5351.set_correction(cal_val + delta);
             set_rx_freq(rx_freq);
             cal_val = si5351.get_correction();
-            Serial.print("Correction:"); Serial.println(cal_val);
+            Serial.print(F("Correction:")); Serial.println(cal_val);
         }
     }
     Serial.println(F("Correction value saved to Si5351 EEPROM."));
