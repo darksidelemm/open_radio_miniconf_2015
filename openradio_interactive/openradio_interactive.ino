@@ -216,42 +216,51 @@ static void read_tx_freq(void)
 }
 
 // Interactive receive tuning mode.
-void rx_vfo(){
-    Serial.println(F("RX VFO Mode, press q to exit.\n"));
+static void rx_vfo(void)
+{
+    Serial.println(F("RX VFO Mode, press q to exit.\r\n"));
 
     Serial.println(F("    Up: r   t    y    u    i    o    p"));
     Serial.println(F("  Down: f   g    h    j    k    l    ;"));
     Serial.println(F("Amount: 1   10  100   1K   10K 100K  1M"));
 
-    while(1){
-        if(Serial.available()>0){
+    while (1) {
+        if (Serial.available() > 0) {
             char c = Serial.read();
-            if(c=='q') break;
 
             uint32_t temp = rx_freq;
-            if(c=='r'){         temp += 1;
-            }else if(c=='f'){   temp -= 1;
-            }else if(c=='t'){   temp += 10;
-            }else if(c=='g'){   temp -= 10;
-            }else if(c=='y'){   temp += 100;
-            }else if(c=='h'){   temp -= 100;
-            }else if(c=='u'){   temp += 1000;
-            }else if(c=='j'){   temp -= 1000;
-            }else if(c=='i'){   temp += 10000;
-            }else if(c=='k'){   temp -= 10000;
-            }else if(c=='o'){   temp += 100000;
-            }else if(c=='l'){   temp -= 100000;
-            }else if(c=='p'){   temp += 1000000;
-            }else if(c==';'){   temp -= 1000000;
-            }else{// Do nothing
+            switch (c) {
+            case 'q':
+                flush_input();
+                return;
+
+            case 'r': temp += 1; break;
+            case 'f': temp -= 1; break;
+            case 't': temp += 10; break;
+            case 'g': temp -= 10; break;
+            case 'y': temp += 100; break;
+            case 'h': temp -= 100; break;
+            case 'u': temp += 1000; break;
+            case 'j': temp -= 1000; break;
+            case 'i': temp += 10000; break;
+            case 'k': temp -= 10000; break;
+            case 'o': temp += 100000; break;
+            case 'l': temp -= 100000; break;
+            case 'p': temp += 1000000; break;
+            case ';': temp -= 1000000; break;
+
+            default:
+                // Do nothing
+                continue;
             }
 
-            if(temp< UPPER_LIMIT && temp > LOWER_LIMIT){
+            if (temp < UPPER_LIMIT && temp > LOWER_LIMIT) {
                 set_rx_freq(temp);
-            }else{
-                Serial.print("Out of range.");
+            } else {
+                Serial.print(F("Out of range. "));
             }
-            Serial.print("RX Center Freq:"); Serial.println(rx_freq);
+
+            Serial.print(F("RX Center Freq: ")); Serial.println(rx_freq);
         }
     }
 }
