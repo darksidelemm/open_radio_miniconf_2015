@@ -91,8 +91,17 @@ void setup(){
 
 }
 
-void loop(){
-    while(Serial.available()>0){ Serial.read();} // Flush the input buffer
+static void flush_input(void)
+{
+    while (Serial.available() > 0)
+        Serial.read();
+}
+
+
+void loop()
+{
+    flush_input();
+
     print_state();
     Serial.println("");
     Serial.println("MENU:");
@@ -109,7 +118,7 @@ void loop(){
     
     char cmd = Serial.read();
     delay(300);
-    while(Serial.available()>0){ Serial.read();} // Flush the input buffer
+    flush_input();
     Serial.println("");
     switch(cmd){
         case '1':
@@ -155,16 +164,13 @@ static int32_t get_freq(void)
 {
     int32_t freq;
 
-    // Flush the input buffer
-    while (Serial.available() > 0)
-        Serial.read();
+    flush_input();
 
     Serial.print(F("Enter Frequency in kHz: "));
     freq = Serial.parseInt();
     Serial.println(freq);
 
-    while (Serial.available() > 0)
-        Serial.read();
+    flush_input();
 
     if (freq < 30000 && freq > 100)
         return freq * 1000;
