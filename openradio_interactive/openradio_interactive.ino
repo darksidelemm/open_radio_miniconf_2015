@@ -104,7 +104,7 @@ void loop()
 
     print_state();
     Serial.println("");
-    Serial.println("MENU:");
+    Serial.println(F("MENU:"));
     Serial.println(F("1: View current settings."));
     Serial.println(F("2: Change RX Frequency."));
     Serial.println(F("3: Change TX Frequency."));
@@ -113,46 +113,42 @@ void loop()
     Serial.println(F("6: Start BPSK31 Terminal"));
     Serial.println(F("7: RX VFO Mode"));
     Serial.println(F("8: Calibration Mode"));
-    
-    while(Serial.available()==0){} // Wait for input
-    
+
+    while (Serial.available() == 0); // Wait for input
+
     char cmd = Serial.read();
-    delay(300);
     flush_input();
     Serial.println("");
-    switch(cmd){
-        case '1':
-            print_state();
-            break;
-            
-        case '2':
-            read_rx_freq();
-            break;
-        
-        case '3':
-            read_tx_freq();
-            break;
-            
-        case '4':
-            toggle_tx_relay();
-            break;
-            
-        case '5':
-            toggle_tx();
-            break;
-        case '6':
-            pskTerminal(31);
-            break;
-        case '7':
-            rx_vfo();
-            break;
-        case '8':
-            calibrate();
-            break;
-        default:
-            break;
-    }
 
+    switch(cmd) {
+    case '1':
+        // Do nothing, state will print along with menu
+        break;
+    case '2':
+        read_rx_freq();
+        break;
+    case '3':
+        read_tx_freq();
+        break;
+    case '4':
+        toggle_tx_relay();
+        break;
+    case '5':
+        toggle_tx();
+        break;
+    case '6':
+        pskTerminal(250);
+        break;
+    case '7':
+        rx_vfo();
+        break;
+    case '8':
+        calibrate();
+        break;
+
+    default:
+        break;
+    }
 }
 
 
