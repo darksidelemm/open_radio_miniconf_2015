@@ -317,22 +317,22 @@ void toggle_tx(){
     }
 }
 
-void print_state(){
-    Serial.print(F("\nReceive Center Frequency (Hz): ")); Serial.println(rx_freq);
-    Serial.print(F("Transmit Frequency (Hz): ")); Serial.println(tx_freq);
-    Serial.print(F("TX/RX Relay State: "));
-    if(tx_relay_state){
-        Serial.println("TX");
-    }else{
-        Serial.println("RX");
-    }
+static void print_state(void)
+{
+    Serial.print(F("\r\nRX Frequency (Hz): ")); Serial.println(rx_freq);
+    Serial.print(F("TX Frequency (Hz): ")); Serial.println(tx_freq);
 
-    Serial.print("Transmitter State: ");
-    if(tx_state){
+    Serial.print(F("TX/RX Relay State: "));
+    if (tx_relay_state)
+        Serial.println("TX");
+    else
+        Serial.println("RX");
+
+    Serial.print(F("Transmitter State: "));
+    if (tx_state)
         Serial.println("ON");
-    }else{
+    else
         Serial.println("OFF");
-    }
 }
 
 /*
