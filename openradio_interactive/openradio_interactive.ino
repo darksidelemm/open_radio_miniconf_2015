@@ -27,16 +27,8 @@
 #include "TimerOne.h"
 
 #include "settings.h"
-
-// Pin Definitions
-#define TX_RX_SWITCH    2
-#define MODULATION      3
-#define LED             13
-
-// Which Si5351 clock is used for what...
-#define RX_CLOCK    SI5351_CLK0
-#define TX_CLOCK    SI5351_CLK2
-#define SPARE_CLOCK    SI5351_CLK1
+#include "pins.h"
+#include "ring_buffer.h"
 
 // Default output frequency
 #define RX_FREQ 27000000
@@ -48,8 +40,9 @@
 // Other settings
 #define SERIAL_BAUD     57600
 
-// Fast pin toggling.
-#define digitalToggleFast(P) *portInputRegister(digitalPinToPort(P)) = digitalPinToBitMask(P)
+// Prototypes presnt in PSK.ino. Forward delcare them so ino can build
+void bpsk_start(int baud_rate);
+void bpsk_stop(void);
 
 Si5351 si5351;
 
@@ -59,15 +52,7 @@ int tx_state = 0;
 static struct settings settings;
 
 // Ring buffer for use with the interrupt-driven transmit buffer.
-#define TX_BUFFER_SIZE  64
-struct ring_buffer
-{
-  unsigned char buffer[TX_BUFFER_SIZE];
-  volatile unsigned int head;
-  volatile unsigned int tail;
-};
-
-ring_buffer data_tx_buffer = { { 0 }, 0, 0};
+struct ring_buffer data_tx_buffer = { { 0 }, 0, 0};
 
 /* Returns true if settings are valid */
 static bool read_settings(void)

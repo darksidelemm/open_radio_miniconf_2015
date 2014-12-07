@@ -21,8 +21,16 @@
     see <http://www.gnu.org/licenses/>.
 */
 
+#include <avr/pgmspace.h>
 
-static uint16_t bpsk_varicode[] = {
+#include "TimerOne.h"
+
+#include "ring_buffer.h"
+#include "pins.h"
+
+extern struct ring_buffer data_tx_buffer;
+
+PROGMEM static const uint16_t bpsk_varicode[] = {
 	0x0355, // 0x00 =>  1010101011 (NUL)
 	0x036d, // 0x01 =>  1011011011 (SOH)
 	0x02dd, // 0x02 =>  1011101101 (STX)
@@ -153,12 +161,10 @@ static uint16_t bpsk_varicode[] = {
 	0x02b7, // 0x7f =>  1110110101 (DEL)
 };
 
-
 // Phase Reversal routine. Currently this just toggles an IO line.
 void bpsk_phase_switch(){
     digitalToggleFast(MODULATION);
 }
-
 
 // Interrupt driven transmit routines
 
