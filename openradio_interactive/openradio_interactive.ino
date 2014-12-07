@@ -19,10 +19,14 @@
 */
 
 #include <string.h>
+
+#include <EEPROM.h>
+#include <Wire.h>
+
 #include "si5351.h"
-#include "Wire.h"
 #include "TimerOne.h"
 
+#include "settings.h"
 
 // Pin Definitions
 #define TX_RX_SWITCH    2
@@ -51,8 +55,8 @@ Si5351 si5351;
 
 int tx_relay_state = 0;
 int tx_state = 0;
-uint32_t rx_freq = RX_FREQ;
-uint32_t tx_freq = TX_FREQ;
+
+static struct settings settings;
 
 // Ring buffer for use with the interrupt-driven transmit buffer.
 #define TX_BUFFER_SIZE  64
@@ -194,7 +198,7 @@ static void read_rx_freq(void)
     }
 
     set_rx_freq(freq);
-    show_freq(rx_freq);
+    show_freq(settings.rx_freq);
 }
 
 // Prompt user for a TX frequency.
@@ -208,7 +212,7 @@ static void read_tx_freq(void)
     }
 
     set_tx_freq(freq);
-    show_freq(tx_freq);
+    show_freq(settings.tx_freq);
 }
 
 // Interactive receive tuning mode.
@@ -224,7 +228,7 @@ static void rx_vfo(void)
         if (Serial.available() > 0) {
             char c = Serial.read();
 
-            uint32_t temp = rx_freq;
+            uint32_t temp = settings.rx_freq;
             switch (c) {
             case 'q':
                 flush_input();
@@ -256,7 +260,7 @@ static void rx_vfo(void)
                 Serial.print(F("Out of range. "));
             }
 
-            Serial.print(F("RX Center Freq: ")); Serial.println(rx_freq);
+            Serial.print(F("RX Center Freq: ")); Serial.println(settings.rx_freq);
         }
     }
 }
@@ -293,7 +297,7 @@ static void calibrate(void)
             }
 
             si5351.set_correction(cal_val + delta);
-            set_rx_freq(rx_freq);
+            set_rx_freq(settings.rx_freq);
             cal_val = si5351.get_correction();
             Serial.print(F("Correction:")); Serial.println(cal_val);
         }
@@ -319,8 +323,8 @@ void toggle_tx(){
 
 static void print_state(void)
 {
-    Serial.print(F("\r\nRX Frequency (Hz): ")); Serial.println(rx_freq);
-    Serial.print(F("TX Frequency (Hz): ")); Serial.println(tx_freq);
+    Serial.print(F("\r\nRX Frequency (Hz): ")); Serial.println(settings.rx_freq);
+    Serial.print(F("TX Frequency (Hz): ")); Serial.println(settings.tx_freq);
 
     Serial.print(F("TX/RX Relay State: "));
     if (tx_relay_state)
@@ -398,13 +402,13 @@ uint8_t si5351_init(){
 // Quadrature mixer requires a 4X LO signal.
 void set_rx_freq(uint32_t freq){
     si5351.set_freq(freq*4, SI5351_PLL_FIXED, RX_CLOCK);
-    rx_freq = freq;
+    settings.rx_freq = freq;
 }
 
 void set_tx_freq(uint32_t freq){
     // Let driver choose PLL settings. May glitch when changing frequencies.
     si5351.set_freq(freq, 0, TX_CLOCK);
-    tx_freq = freq;
+    settings.tx_freq = freq;
 }
 
 void tx_enable(){
