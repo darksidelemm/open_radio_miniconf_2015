@@ -69,6 +69,30 @@ struct ring_buffer
 
 ring_buffer data_tx_buffer = { { 0 }, 0, 0};
 
+/* Returns true if settings are valid */
+static bool read_settings(void)
+{
+    uint8_t *p = (uint8_t *)&settings;
+    int i = 0;
+
+    while(i < sizeof(struct settings))
+        *p++ = EEPROM.read(i++);
+
+    return settings.magic == SETTINGS_MAGIC;
+}
+
+static void write_settings(void)
+{
+    uint8_t *p = (uint8_t *)&settings;
+    int i = 0;
+
+    // Invalidate checksum to guard against partial writes
+    EEPROM.write(0, 0);
+
+    while(i < sizeof(struct settings))
+        EEPROM.write(i++, *p++);
+}
+
 void setup(){
     
     // Initialise things.
@@ -90,6 +114,14 @@ void setup(){
     tx_enable();
     delay(300);
     tx_disable();
+
+    if (!read_settings()) {
+        Serial.println(F("Resetting settings to defaults"));
+        settings.magic = SETTINGS_MAGIC;
+        settings.rx_freq = RX_FREQ;
+        settings.tx_freq = TX_FREQ;
+        settings.calibration = 0;
+    }
 
     print_state();
 
@@ -117,6 +149,7 @@ void loop()
     Serial.println(F("6: Start BPSK31 Terminal"));
     Serial.println(F("7: RX VFO Mode"));
     Serial.println(F("8: Calibration Mode"));
+    Serial.println(F("9: Save Settings"));
 
     while (Serial.available() == 0); // Wait for input
 
@@ -148,6 +181,9 @@ void loop()
         break;
     case '8':
         calibrate();
+        break;
+    case '9':
+        save_settings();
         break;
 
     default:
@@ -303,6 +339,13 @@ static void calibrate(void)
         }
     }
     Serial.println(F("Correction value saved to Si5351 EEPROM."));
+}
+
+static void save_settings(void)
+{
+    Serial.print("Saving settings...");
+    write_settings();
+    Serial.println("Done");
 }
 
 void toggle_tx_relay(){
