@@ -34,6 +34,8 @@
 #include "pins.h"
 #include "ring_buffer.h"
 
+#define VERSION "0.1"
+
 // Default output frequency
 #define RX_FREQ 27000000
 #define TX_FREQ 27000000
@@ -94,6 +96,9 @@ void setup(){
 
     Serial.begin(SERIAL_BAUD);
     Serial.setTimeout(1000 * 10);
+
+    Serial.print(F(VERSION" "__DATE__" "__TIME__));
+
     Serial.print(F("Starting up Si5351... "));
     uint8_t rev_id = si5351_init();
     Serial.print(F("Got Rev ID "));
