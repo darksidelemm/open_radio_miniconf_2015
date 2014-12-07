@@ -97,7 +97,7 @@ void setup(){
     Serial.begin(SERIAL_BAUD);
     Serial.setTimeout(1000 * 10);
 
-    Serial.print(F(VERSION" "__DATE__" "__TIME__));
+    Serial.println(F(VERSION" "__DATE__" "__TIME__));
 
     Serial.print(F("Starting up Si5351... "));
     uint8_t rev_id = si5351_init();
@@ -350,10 +350,16 @@ static void save_settings(void)
 #define MIN_CHANNEL 1
 #define MAX_CHANNEL 30
 
+
+#ifdef USE_FLASH
 // From https://docs.google.com/spreadsheets/d/1KP5XsAHPCD2FsUW5RoqCfCJYRt2o03q6RN2TroPgEKk/edit#gid=0
-const prog_uint16_t channel_list[] = {8986, 8990, 8993, 8996, 9000,
-    9003, 9006, 9010, 9013, 9016, 9020, 9023, 9026, 9030, 9033, 9036, 9040, 9043,
-    9046, 9050, 9053, 9056, 9060, 9063, 9066, 9070, 9073, 9076, 9080, 9083};
+const prog_uint16_t channel_list[] =
+#else
+const uint16_t channel_list[] =
+#endif
+        {8986, 8990, 8993, 8996, 9000, 9003, 9006, 9010, 9013, 9016, 9020, 9023, 9026,
+        9030, 9033, 9036, 9040, 9043, 9046, 9050, 9053, 9056, 9060, 9063, 9066, 9070,
+        9073, 9076, 9080, 9083};
 
 static void set_channel(void)
 {
@@ -372,7 +378,11 @@ static void set_channel(void)
         return;
     }
 
+#ifdef USE_FLASH
     uint32_t rx = (uint32_t)pgm_read_word_near(channel_list + chan-1) * 1000;
+#else
+    uint32_t rx = (uint32_t)channel_list[chan-1] * 1000;
+#endif
     uint32_t tx = rx * 3 + 1500;
 
     set_rx_freq(rx);
