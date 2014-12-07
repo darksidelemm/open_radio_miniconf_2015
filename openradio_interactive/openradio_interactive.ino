@@ -196,7 +196,7 @@ static int32_t get_freq(void)
     if (freq < 30000 && freq > 100)
         return freq * 1000;
 
-    Serial.println("Error");
+    Serial.println(F("Error: timeout or frequency out of range"));
 
     return -1;
 }
