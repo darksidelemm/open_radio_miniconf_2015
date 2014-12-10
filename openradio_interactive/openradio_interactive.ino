@@ -387,6 +387,9 @@ static void set_channel(void)
     set_rx_freq(rx);
     set_tx_freq(tx);
 
+    // Save settings
+    write_settings();
+
     // Arduino sucks
     Serial.print(F("Channel ")); Serial.print(chan);
     Serial.print(F(" selected: ")); Serial.print(rx);
