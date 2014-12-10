@@ -428,22 +428,6 @@ static void print_state(void)
         Serial.println("OFF");
 }
 
-/*
-void tx_bpsk31(){
-    tx();
-    tx_enable();
-    bpsk_start(31);
-    delay(1000);
-    bpsk_add_data(relaymessage);
-    bpsk_add_data("TESTING VK5QI");
-    while(data_waiting(&data_tx_buffer)>0);
-    delay(1000);
-    bpsk_stop();
-    tx_disable();
-    rx();
-}
-*/
-
 static void psk_rate_select(void)
 {
         Serial.println(F("Select BPSK baud rate:\r\n"));
