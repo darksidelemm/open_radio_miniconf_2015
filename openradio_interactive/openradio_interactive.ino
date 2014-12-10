@@ -47,7 +47,7 @@
 #define SERIAL_BAUD     57600
 
 // Prototypes presnt in PSK.ino. Forward delcare them so ino can build
-void bpsk_start(int baud_rate);
+bool bpsk_start(uint16_t baud_rate);
 void bpsk_stop(void);
 
 Si5351 si5351;
@@ -169,7 +169,7 @@ void loop()
         toggle_tx();
         break;
     case '6':
-        pskTerminal(250);
+        psk_terminal(250);
         break;
     case '7':
         rx_vfo();
@@ -444,14 +444,17 @@ void tx_bpsk31(){
     rx();
 }
 */
-int pskTerminal(int baud_rate){
+static void psk_terminal(uint16_t baud_rate)
+{
     char* endptr;
     uint8_t exit_count = 0;
-    Serial.println(F("Starting BPSK31 Terminal. Press ` to exit."));
     tx();
     tx_enable();
-    bpsk_start(baud_rate);
-    
+    if (!bpsk_start(baud_rate))
+        return;
+
+    Serial.println(F("Starting BPSK31 Terminal. Press ` to exit."));
+
     while(1){
         if(Serial.available()>0){
             char c = Serial.read();

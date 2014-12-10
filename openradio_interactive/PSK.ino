@@ -182,7 +182,7 @@ void bpsk_add_data(char* string){
 	}
 }
 
-void bpsk_start(uint16_t baud_rate){
+bool bpsk_start(uint16_t baud_rate){
     // Set up timer interrupt based on baud rate.
     switch(baud_rate){
         case 31:
