@@ -456,12 +456,22 @@ static void psk_terminal(uint16_t baud_rate)
 
     Serial.println(F("Starting BPSK Terminal. Press ` to exit."));
 
+    long timeout = millis() + 5 * 1000;
+
     while(1){
-        if(Serial.available()>0){
+        if(Serial.available()>0 ) {
             char c = Serial.read();
-            if(c=='`') break;
-            Serial.print(c);// Echo to terminal.
-            store_char(c,&data_tx_buffer); // Add the character to the transmit ring buffer.
+
+            if(c=='`')
+                    break;
+
+            if (millis() > timeout)
+                    break;
+
+            // Echo to terminal
+            Serial.print(c);.
+
+            store_char(c,&data_tx_buffer);
         }
     }
     while(data_waiting(&data_tx_buffer)>0){}
