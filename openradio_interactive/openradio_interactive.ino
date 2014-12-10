@@ -169,7 +169,7 @@ void loop()
         toggle_tx();
         break;
     case '6':
-        psk_terminal(250);
+        psk_rate_select();
         break;
     case '7':
         rx_vfo();
@@ -189,7 +189,6 @@ void loop()
         break;
     }
 }
-
 
 //
 // Menu Helper Functions
@@ -444,6 +443,21 @@ void tx_bpsk31(){
     rx();
 }
 */
+
+static void psk_rate_select(void)
+{
+        Serial.println(F("Select BPSK baud rate:\r\n"));
+        Serial.println(F("\t31\r\n\t63\r\n\t125\r\n\t250\r\n\t500\r\n\t1000"));
+
+        long rate = Serial.parseInt();
+        if (rate == 0)
+                rate = 31;
+        Serial.println(rate);
+        flush_input();
+
+        psk_terminal(rate);
+}
+
 static void psk_terminal(uint16_t baud_rate)
 {
     char* endptr;
@@ -453,7 +467,7 @@ static void psk_terminal(uint16_t baud_rate)
     if (!bpsk_start(baud_rate))
         return;
 
-    Serial.println(F("Starting BPSK31 Terminal. Press ` to exit."));
+    Serial.println(F("Starting BPSK Terminal. Press ` to exit."));
 
     while(1){
         if(Serial.available()>0){
