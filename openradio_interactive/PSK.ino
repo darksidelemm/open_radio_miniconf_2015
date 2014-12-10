@@ -182,9 +182,11 @@ void bpsk_add_data(char* string){
 	}
 }
 
-void bpsk_start(int baud_rate){
+void bpsk_start(uint16_t baud_rate){
     // Set up timer interrupt based on baud rate.
     switch(baud_rate){
+        case 31:
+            Timer1.initialize(32000);
         case 63:
             Timer1.initialize(15873);
             break;
@@ -194,10 +196,16 @@ void bpsk_start(int baud_rate){
         case 250:
             Timer1.initialize(4000);
             break;
-        default:
-            Timer1.initialize(32000);
+        case 500:
+            Timer1.initialize(2000);
             break;
-    }   
+        case 1000:
+            Timer1.initialize(1000);
+            break;
+        default:
+            System.print("ERROR: buad rate not supported\n");
+            System.println(baud_rate);
+    }
 
     Timer1.attachInterrupt(bpsk_isr);
 }
