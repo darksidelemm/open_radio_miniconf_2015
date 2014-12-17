@@ -254,6 +254,11 @@ static void rx_vfo(void)
 {
     Serial.println(F("RX VFO Mode, press q to exit.\r\n"));
 
+    vfo_interface();
+}
+
+static void vfo_interface(void)
+{
     Serial.println(F("    Up: r   t    y    u    i    o    p"));
     Serial.println(F("  Down: f   g    h    j    k    l    ;"));
     Serial.println(F("Amount: 1   10  100   1K   10K 100K  1M"));
@@ -297,46 +302,6 @@ static void rx_vfo(void)
             Serial.print(F("RX Center Freq: ")); Serial.println(settings.rx_freq);
         }
     }
-}
-
-// Interactive calibration tuning mode.
-static void calibrate(void)
-{
-    Serial.println(F("Calibration Mode, press q to exit.\n"));
-    Serial.println(F("    Up: r   t    y"));
-    Serial.println(F("  Down: f   g    h "));
-    Serial.println(F("Amount: 1   10  100"));
-
-    int32_t cal_val = si5351.get_correction();
-    Serial.print(F("Current Correction Value: ")); Serial.println(cal_val);
-
-    while(1) {
-        if (Serial.available() > 0) {
-            char c = Serial.read();
-
-            int32_t delta;
-
-            switch (c) {
-            case 'q':
-                flush_input();
-                return;
-            case 'r': delta = 1; break;
-            case 'f': delta = -1; break;
-            case 't': delta = 10; break;
-            case 'g': delta = -10; break;
-            case 'y': delta = 100; break;
-            case 'h': delta = -100; break;
-            default:
-                      break;
-            }
-
-            si5351.set_correction(cal_val + delta);
-            set_rx_freq(settings.rx_freq);
-            cal_val = si5351.get_correction();
-            Serial.print(F("Correction:")); Serial.println(cal_val);
-        }
-    }
-    Serial.println(F("Correction value saved to Si5351 EEPROM."));
 }
 
 static void save_settings(void)
@@ -469,7 +434,7 @@ static void psk_terminal(uint16_t baud_rate)
                     break;
 
             // Echo to terminal
-            Serial.print(c);.
+            Serial.print(c);
 
             store_char(c,&data_tx_buffer);
         }
