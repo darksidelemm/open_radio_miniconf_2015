@@ -34,7 +34,7 @@
 #include "pins.h"
 #include "ring_buffer.h"
 
-#define VERSION "0.1"
+#define VERSION "0.2"
 
 // Default output frequency
 #define RX_FREQ 27000000
@@ -114,7 +114,7 @@ void setup(){
         settings.magic = SETTINGS_MAGIC;
         settings.rx_freq = RX_FREQ;
         settings.tx_freq = TX_FREQ;
-        settings.calibration = 0;
+        settings.cal_factor = 1.0f;
     }
 
     print_state();
@@ -362,6 +362,42 @@ static void set_channel(void)
     Serial.println(F(" Hz TX"));
 }
 
+static void calibrate(void)
+{
+    uint32_t f0 = 7100000; // reference frequency (Hz)
+    uint32_t f1 = 7098850; // centre frequency of radio (Hz)
+
+    int32_t chan;
+
+    flush_input();
+
+    Serial.print(F("Enter reference frequnecy (Hz): "));
+    f0 = Serial.parseInt();
+    Serial.println(f0);
+
+    flush_input();
+
+    if (f0 > UPPER_LIMIT || f0 < LOWER_LIMIT) {
+        Serial.println(F("Frequency out of range. Try again"));
+        return;
+    }
+
+    settings.cal_factor = 1.0f;
+    set_rx_freq(f0);
+
+    Serial.println();
+    Serial.println(F("Adjust until reference is at 1kHz above DC. Press q to quit"));
+
+    vfo_interface();
+
+    settings.cal_factor = (float)settings.rx_freq / ((float)f0 - 1000.0f);
+
+    Serial.print(F("Calibration factor is "));
+    Serial.println(settings.cal_factor, 8);
+
+    set_rx_freq(f0);
+}
+
 void toggle_tx_relay(){
     if(tx_relay_state){
         rx();
@@ -394,6 +430,9 @@ static void print_state(void)
         Serial.println("ON");
     else
         Serial.println("OFF");
+
+    Serial.print(F("Calibration factor: "));
+    Serial.println(settings.cal_factor, 8);
 }
 
 static void psk_rate_select(void)
@@ -468,16 +507,23 @@ uint8_t si5351_init(){
 
 }
 
-// Quadrature mixer requires a 4X LO signal.
-void set_rx_freq(uint32_t freq){
-    si5351.set_freq(freq*4, SI5351_PLL_FIXED, RX_CLOCK);
+static void set_rx_freq(uint32_t freq)
+{
+    // Save actual value
     settings.rx_freq = freq;
+
+    // Quadrature mixer requires a 4X LO signal.
+    si5351.set_freq(freq * settings.cal_factor * 4, SI5351_PLL_FIXED,
+                    RX_CLOCK);
 }
 
-void set_tx_freq(uint32_t freq){
-    // Let driver choose PLL settings. May glitch when changing frequencies.
-    si5351.set_freq(freq, 0, TX_CLOCK);
+static void set_tx_freq(uint32_t freq)
+{
+    // Save actual value
     settings.tx_freq = freq;
+
+    // Let driver choose PLL settings. May glitch when changing frequencies.
+    si5351.set_freq(freq * settings.cal_factor, 0, TX_CLOCK);
 }
 
 void tx_enable(){
