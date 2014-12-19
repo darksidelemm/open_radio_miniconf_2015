@@ -64,7 +64,7 @@ struct ring_buffer data_tx_buffer = { { 0 }, 0, 0};
 static bool read_settings(void)
 {
     uint8_t *p = (uint8_t *)&settings;
-    unsigned int i = 0;
+    uint8_t i = 0;
 
     while(i < sizeof(struct settings))
         *p++ = EEPROM.read(i++);
@@ -75,7 +75,7 @@ static bool read_settings(void)
 static void write_settings(void)
 {
     uint8_t *p = (uint8_t *)&settings;
-    unsigned int i = 0;
+    uint8_t i = 0;
 
     // Invalidate checksum to guard against partial writes
     EEPROM.write(0, 0);
@@ -365,9 +365,6 @@ static void set_channel(void)
 static void calibrate(void)
 {
     uint32_t f0 = 7100000; // reference frequency (Hz)
-    //uint32_t f1 = 7098850; // centre frequency of radio (Hz)
-
-    //int32_t chan;
 
     flush_input();
 
@@ -451,8 +448,6 @@ static void psk_rate_select(void)
 
 static void psk_terminal(uint16_t baud_rate)
 {
-    //char* endptr;
-    //uint8_t exit_count = 0;
     tx();
     tx_enable();
     if (!bpsk_start(baud_rate))
