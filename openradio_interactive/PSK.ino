@@ -206,9 +206,11 @@ bool bpsk_start(uint16_t baud_rate){
         default:
             Serial.print("ERROR: buad rate not supported\n");
             Serial.println(baud_rate);
+            return false;
     }
 
     Timer1.attachInterrupt(bpsk_isr);
+    return true;
 }
 
 void bpsk_stop(){
