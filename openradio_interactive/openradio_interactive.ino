@@ -34,7 +34,7 @@
 #include "pins.h"
 #include "ring_buffer.h"
 
-#define VERSION "0.2"
+#define VERSION "0.3"
 
 // Default output frequency
 #define RX_FREQ 27000000
@@ -105,9 +105,9 @@ void setup(){
     Serial.println(rev_id);
 
     // Click the relay as an 'audible' startup indicator.
-    tx_enable();
+    digitalWrite(TX_RX_SWITCH, HIGH);
     delay(300);
-    tx_disable();
+    digitalWrite(TX_RX_SWITCH, LOW);
 
     if (!read_settings()) {
         Serial.println(F("Resetting settings to defaults"));
@@ -116,6 +116,9 @@ void setup(){
         settings.tx_freq = TX_FREQ;
         settings.cal_factor = 1.0f;
     }
+
+    set_rx_freq(settings.rx_freq);
+    set_tx_freq(settings.tx_freq);
 
     print_state();
 
@@ -145,6 +148,7 @@ void loop()
     Serial.println(F("8: Calibration Mode"));
     Serial.println(F("9: Save Settings"));
     Serial.println(F("A: Set channel (TX/RX frequency pair)"));
+    Serial.println(F("B: Start Beacon"));
 
     while (Serial.available() == 0); // Wait for input
 
@@ -169,7 +173,7 @@ void loop()
         toggle_tx();
         break;
     case '6':
-        psk_rate_select();
+        psk_rate_select_terminal();
         break;
     case '7':
         rx_vfo();
@@ -183,6 +187,11 @@ void loop()
     case 'A':
     case 'a':
         set_channel();
+        break;
+
+    case 'b':
+    case 'B':
+        psk_rate_select_beacon();
         break;
 
     default:
@@ -432,7 +441,7 @@ static void print_state(void)
     Serial.println(settings.cal_factor, 8);
 }
 
-static void psk_rate_select(void)
+static void psk_rate_select_terminal(void)
 {
         Serial.println(F("Select BPSK baud rate:\r\n"));
         Serial.println(F("\t31\r\n\t63\r\n\t125\r\n\t250\r\n\t500\r\n\t1000"));
@@ -464,15 +473,55 @@ static void psk_terminal(uint16_t baud_rate)
             if(c=='`')
                     break;
 
-            if (millis() > timeout)
-                    break;
-
             // Echo to terminal
             Serial.print(c);
 
             store_char(c,&data_tx_buffer);
         }
     }
+    while(data_waiting(&data_tx_buffer)>0){}
+    delay(500);
+    bpsk_stop();
+    tx_disable();
+    rx();
+}
+
+static void psk_rate_select_beacon(void)
+{
+        Serial.println(F("Select BPSK baud rate:\r\n"));
+        Serial.println(F("\t31\r\n\t63\r\n\t125\r\n\t250\r\n\t500\r\n\t1000"));
+
+        long rate = Serial.parseInt();
+        if (rate == 0)
+                rate = 31;
+        Serial.println(rate);
+        flush_input();
+
+        psk_beacon(rate);
+}
+
+static void psk_beacon(uint16_t baud_rate)
+{
+    char* endptr;
+    tx();
+    tx_enable();
+    if (!bpsk_start(baud_rate))
+        return;
+
+    Serial.println(F("Starting BPSK Beacon. Press q to exit."));
+
+    while(1){
+        if(data_waiting(&data_tx_buffer)==0){
+            bpsk_add_data("OpenRadio MiniConf BPSK Beacon\r\n");
+        }
+        if(Serial.available()>0 ) {
+            char c = Serial.read();
+
+            if(c=='q')
+                break;
+        }
+    }
+    Serial.println(F("Waiting for transmission to complete..."));
     while(data_waiting(&data_tx_buffer)>0){}
     delay(500);
     bpsk_stop();
