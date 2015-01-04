@@ -469,9 +469,6 @@ static void psk_terminal(uint16_t baud_rate)
             if(c=='`')
                     break;
 
-            if (millis() > timeout)
-                    break;
-
             // Echo to terminal
             Serial.print(c);
 
