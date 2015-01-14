@@ -16,7 +16,7 @@ openradio_serial_rate = 57600
 psk_baud_rate = 250
 
 packet_header = "$$$$"
-packet_footer = "<EOM>"
+packet_footer = "<EOM>\n"
 
 print "Connecting to OpenRadio..."
 or_serial = serial.Serial(openradio_serial_port, openradio_serial_rate, timeout=1)
@@ -74,8 +74,8 @@ set_parameter("CHAN", str(channel))
 
 while(True):
     print '>',
-    message = raw_input()
-    or_serial.write("PSK,%d,%s<%s>%s\n" % (psk_baud_rate, packet_header, nick, message))
+    message = raw_input().rstrip()
+    or_serial.write("PSK,%d,%s<%s>%s%s\n" % (psk_baud_rate, packet_header, nick, message, packet_footer))
 
     print "Sending...",
     while(not("OK" in or_serial.readline())):

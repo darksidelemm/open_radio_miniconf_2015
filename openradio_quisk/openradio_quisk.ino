@@ -161,7 +161,7 @@ void loop(){
 			}
 			inputBuffer = "";
 			inputBufferPtr = 0;
-		}else if( isalnum(inChar) || ispunct(inChar) || isblank(inChar) ){
+		}else if( isalnum(inChar) || ispunct(inChar) || isblank(inChar) || inChar==4 ){
 			// Add to the input buffer if printable and not a line ending.
 			inputBuffer += inChar;
 			inputBufferPtr++;
@@ -451,12 +451,14 @@ int psk_transmit(String param1, String param2){
     for(int i = 0; i<param2.length(); i++){
     	store_char(param2.charAt(i),&data_tx_buffer);
     }
-
+    // Send an EOT control character, then a newline, to signify the end of the message.
+    store_char((char)4, &data_tx_buffer);
+    store_char('\n', &data_tx_buffer);
     while(data_waiting(&data_tx_buffer)>0){}
     delay(300);
     bpsk_stop();
     tx_disable();
     rx();
-    
+
     return 0;
 }
