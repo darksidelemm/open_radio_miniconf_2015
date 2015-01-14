@@ -224,6 +224,8 @@ int parseCommand(String input){
 			return parsePSKFreq(param1);
 		}else if(input.startsWith("CARRIER")){
 			return parseCarrier(param1);
+		}else if(input.startsWith("CHAN")){
+			return set_channel(param1);
 		}else{
 			// No other commands are valid with only one parameter. Error
 			return 1;
@@ -233,7 +235,7 @@ int parseCommand(String input){
 		String param2 = input.substring(separators[1]+1);
 		
 		if(input.startsWith("PSK")){
-			return parsePSK(param1,param2);
+			return psk_transmit(param1,param2);
 		}else{
 			// No other commands are valid with only one parameter. Error
 			return 1;
@@ -375,4 +377,86 @@ void rx(){
     digitalWrite(TX_RX_SWITCH, LOW);
     digitalWrite(LED, LOW);
     tx_relay_state = 0;
+}
+
+#define MIN_CHANNEL 1
+#define MAX_CHANNEL 30
+
+
+#ifdef USE_FLASH
+// From https://docs.google.com/spreadsheets/d/1KP5XsAHPCD2FsUW5RoqCfCJYRt2o03q6RN2TroPgEKk/edit#gid=0
+const prog_uint16_t channel_list[] =
+#else
+const uint16_t channel_list[] =
+#endif
+        {8986, 8990, 8993, 8996, 9000, 9003, 9006, 9010, 9013, 9016, 9020, 9023, 9026,
+        9030, 9033, 9036, 9040, 9043, 9046, 9050, 9053, 9056, 9060, 9063, 9066, 9070,
+        9073, 9076, 9080, 9083};
+
+int set_channel(String input)
+{
+	unsigned long chan = 0;
+	char* endptr;
+	
+	input.toCharArray(tempBuffer,10);
+	
+	chan = strtoul(tempBuffer,&endptr,10);
+	// If strtoul fails to convert, *endptr contains the character which conversion failed on.
+	// Otherwise, *endptr contains '\0'.
+	if(*endptr != 0) return -1;
+
+
+
+    if (chan < MIN_CHANNEL || chan > MAX_CHANNEL) {
+        return 1;
+    }
+
+#ifdef USE_FLASH
+    uint32_t rx = (uint32_t)pgm_read_word_near(channel_list + chan-1) * 1000;
+#else
+    uint32_t rx = (uint32_t)channel_list[chan-1] * 1000;
+#endif
+    uint32_t tx = rx * 3 + 1500;
+
+    set_rx_freq(rx);
+    set_tx_freq(tx);
+
+    // Save settings
+    write_settings();
+
+    Serial.print("CHAN,"); Serial.println(chan);
+    return 0;
+}
+
+int psk_transmit(String param1, String param2){
+	unsigned long baud_rate = 0;
+	char* endptr;
+	
+	param1.toCharArray(tempBuffer,10);
+	
+	baud_rate = strtoul(tempBuffer,&endptr,10);
+	// If strtoul fails to convert, *endptr contains the character which conversion failed on.
+	// Otherwise, *endptr contains '\0'.
+	if(*endptr != 0) return -1;
+
+    tx();
+    tx_enable();
+    if (!bpsk_start(baud_rate)){
+    	tx_disable();
+    	rx();
+        return 1;
+    }
+    delay(300); //  Short delay for RX sync to occur.
+    // Push string into ring buffer for transmission.
+    for(int i = 0; i<param2.length(); i++){
+    	store_char(param2.charAt(i),&data_tx_buffer);
+    }
+
+    while(data_waiting(&data_tx_buffer)>0){}
+    delay(300);
+    bpsk_stop();
+    tx_disable();
+    rx();
+    
+    return 0;
 }
