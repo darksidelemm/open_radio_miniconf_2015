@@ -1,6 +1,7 @@
 /*
   OpenRadio Quisk Interface 
   Main
+  This is used to provide a serial interface which Quisk SDR can talk to.
   
   Copyright (C) 2014 Mark Jessop <vk5qi@rfhead.net>
 
@@ -169,7 +170,7 @@ void loop(){
 }
 
 // CSV parser function. Splits input into arguments.
-
+// I am so sorry...
 int parseCommand(String input){
 	int params = 0;
 	
@@ -205,6 +206,9 @@ int parseCommand(String input){
 			return 0;
 		}else if(input.startsWith("CAL")){
 			Serial.print("CAL,"); Serial.println(settings.cal_factor,10);
+			return 0;
+		}else if(input.startsWith("VER")){
+			Serial.print("VER,"); Serial.println("OpenRadio V1.1");
 			return 0;
 		}else{
 			// No other commands are valid without parameters. Error
@@ -270,6 +274,7 @@ int parseFreq(String input){
 // This should transmit a carrier at an offset from the rx freq.
 // We probably dont need this right now.
 int parseCarrier(String carrier_str){
+// TODO
 
 }
 
@@ -277,7 +282,7 @@ int parseCarrier(String carrier_str){
 // We need to figure out how to decide what the 'offset' from the RF freq is.
 // Maybe add another command to set this?
 int parsePSK(String rate, String message){
-	
+// TODO
 
 }
 
@@ -307,7 +312,6 @@ int parsePSKFreq(String input){
 	}	
 
 }
-
 
 
 //
