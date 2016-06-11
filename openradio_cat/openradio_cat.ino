@@ -93,6 +93,7 @@ static void write_settings(void)
 int inputBufferPtr = 0;
 char tempBuffer[20]; // Buffer for string to int conversion.
 String inputBuffer = "";
+unsigned char * converted;
 
 void setup(){
     // Initialise things.
@@ -129,11 +130,10 @@ void setup(){
 
 void loop(){
   if(Serial.available()){
-    // Read in a byte.
+
     char inChar = (char)Serial.read();
-    
+
     if( (inChar == '\n') || (inputBufferPtr>INPUTBUFLEN)){
-      // Parse string
       parseCAT(inputBuffer);
     } else {
       inputBuffer += inChar;
@@ -161,6 +161,8 @@ int parseCAT(String input){
   case CAT_FREQ_SET :
     parseFreq(input);
     break;
+  case CAT_RX_FREQ_CMD :
+    sendFreq();
   default :
     break;
   }
@@ -171,14 +173,25 @@ int freqValid(uint32_t freq){
 	return (freq>FREQ_LIMIT_LOWER) && (freq<FREQ_LIMIT_UPPER);
 }
 
-//
-uint8_t bcd2dec(uint8_t bcd)
-{
-  return (bcd/16) * 10 + bcd%16;
-}
+void sendFreq(void) {
+  unsigned char tempWord[4];
+  byte rigFreq[5];
+  rigFreq[4] = CAT_MODE_DIG;
+
+  converted = to_bcd_be(tempWord, settings.rx_freq, 8);
+
+  for (byte i=0; i<4; i++){
+    rigFreq[i] = converted[i];
+  }
+  
+  for (int i = 0; i < 5; i++) {
+    Serial.write(rigFreq[i]);
+  }
+  Serial.flush();
+}   
 
 // Parse frequency, program radio.
-int parseFreq(String input){
+int parseFreq(String input) {
   /*
     ----Set Frequency------------------------------------------------
     {0x00,0x00,0x00,0x00,CAT_FREQ_SET}
@@ -194,18 +207,13 @@ int parseFreq(String input){
 
   */
   unsigned long result = 0;
-  unsigned long combinedresult = 0;
-  char* endptr;
+  byte rigFreq[4];
 
-  uint8_t high, mid1, mid2, low;
-
-  high = bcd2dec(input[0]);
-  mid1 = bcd2dec(input[1]);
-  mid2 = bcd2dec(input[2]);
-  low = bcd2dec(input[3]);
-
-  // result in Hz
-  result = (high * 100000000) + (mid1 * 1000000) + (mid2 * 10000) + (low * 100);
+  for (int i=0; i < 4; i++) {
+    rigFreq[i] = input[i];
+  }
+  
+  result = from_bcd_be(rigFreq, 8);
 
   if(freqValid(result)){
     set_rx_freq(result);
@@ -216,6 +224,47 @@ int parseFreq(String input){
   }	
 }
 
+
+// BCD functions
+// Taken from FT857D Libraries
+unsigned long from_bcd_be(const  byte bcd_data[], unsigned bcd_len)
+{
+	int i;
+	long f = 0;
+
+	for (i=0; i < bcd_len/2; i++) {
+		f *= 10;
+		f += bcd_data[i]>>4;
+		f *= 10;
+		f += bcd_data[i] & 0x0f;
+	}
+	if (bcd_len&1) {
+		f *= 10;
+		f += bcd_data[bcd_len/2]>>4;
+	}
+	return f;
+}
+
+unsigned char * to_bcd_be( unsigned char bcd_data[], unsigned long  freq, unsigned bcd_len)
+{
+	int i;
+	unsigned char a;
+
+	if (bcd_len&1) {
+		bcd_data[bcd_len/2] &= 0x0f;
+		bcd_data[bcd_len/2] |= (freq%10)<<4;
+/* NB: low nibble is left uncleared */
+		freq /= 10;
+	}
+	for (i=(bcd_len/2)-1; i >= 0; i--) {
+		a = freq%10;
+		freq /= 10;
+		a |= (freq%10)<<4;
+		freq /= 10;
+		bcd_data[i] = a;
+	}
+	return bcd_data;
+}
 
 // Si5351 Helper Functions
 //
