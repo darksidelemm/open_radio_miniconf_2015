@@ -1,8 +1,8 @@
 /*
   OpenRadio CAT Interface 
 
-  This is used to provide a serial interface which CAT control software 
-  can talk to
+  This is used to provide a 9600 bps serial interface which CAT control 
+  software can talk to.
 
   Many pieces taken from the Arduino FT857d library by VE3BUX available
   at: http://ve3bux.com/?page_id=501
@@ -130,10 +130,10 @@ void setup(){
 
 void loop(){
   if(Serial.available()){
-
     char inChar = (char)Serial.read();
-
-    if( (inChar == '\n') || (inputBufferPtr>INPUTBUFLEN)){
+    // CAT protocol comes in 5 bytes.
+    // How to deal with misaligned reads?
+    if( inputBufferPtr > 4 || (inputBufferPtr>INPUTBUFLEN)){
       parseCAT(inputBuffer);
     } else {
       inputBuffer += inChar;
@@ -148,22 +148,27 @@ void loop(){
 // CAT Parser function
 int parseCAT(String input){
   /*
-    All CAT commands to the radio should be sent as 5-byte blocks. The commands are generally in the form of: 
+    All CAT commands to the radio should be received as 5-byte blocks.
+    The commands are generally in the form of: 
     
     {P1,P2,P3,P4,CMD}
-    where P1-P4 are parameters
-    and CMD is the command code see CAT.h
+    where P1-P4 are parameters, usually in Binary Coded Decimal
+    and CMD is the command code, for all codes see CAT.h
         
-    This at first revision only implements frequency control
+    This only implements frequency control and sends an acknowledgement 
+    for any other command, without doing anything!
+    
   */
   
   switch(input[4]) {
   case CAT_FREQ_SET :
-    parseFreq(input);
+    setFreq(input);
     break;
   case CAT_RX_FREQ_CMD :
     sendFreq();
+    break;
   default :
+    sendAck();
     break;
   }
   return 0;
@@ -173,25 +178,38 @@ int freqValid(uint32_t freq){
 	return (freq>FREQ_LIMIT_LOWER) && (freq<FREQ_LIMIT_UPPER);
 }
 
+void sendAck(void) {
+  Serial.write(0x00);
+}
+
+void sendErr(void) {
+  Serial.write(0xF0);
+}
+
+void sendPacket(byte packet[5]) {
+  for (int i=0; i<5; i++) {
+    Serial.write(packet[i]);
+  }
+  Serial.flush();
+  return;
+}
+
 void sendFreq(void) {
   unsigned char tempWord[4];
   byte rigFreq[5];
   rigFreq[4] = CAT_MODE_DIG;
-
+  
   converted = to_bcd_be(tempWord, settings.rx_freq, 8);
-
+  
   for (byte i=0; i<4; i++){
     rigFreq[i] = converted[i];
   }
   
-  for (int i = 0; i < 5; i++) {
-    Serial.write(rigFreq[i]);
-  }
-  Serial.flush();
+  sendPacket(rigFreq);
 }   
 
-// Parse frequency, program radio.
-int parseFreq(String input) {
+// Parse frequency, set SI5351 clock
+int setFreq(String input) {
   /*
     ----Set Frequency------------------------------------------------
     {0x00,0x00,0x00,0x00,CAT_FREQ_SET}
@@ -206,6 +224,7 @@ int parseFreq(String input) {
     Eg3;{0x00,0x70,0x90,0x00,0x01} tunes to 7 090 000 Hz
 
   */
+
   unsigned long result = 0;
   byte rigFreq[4];
 
@@ -217,9 +236,11 @@ int parseFreq(String input) {
 
   if(freqValid(result)){
     set_rx_freq(result);
+    sendAck();
     return 0;
   }else{
     //Serial.println("Invalid input.");
+    sendErr();
     return -1;
   }	
 }
