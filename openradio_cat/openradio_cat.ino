@@ -131,19 +131,24 @@ void setup(){
 void loop(){
   if(Serial.available()){
     char inChar = (char)Serial.read();
+    
+    //Serial.print("Got a Char: ");
+    //Serial.println(inChar);
+    inputBuffer += inChar;
+    inputBufferPtr++;
+    //Serial.print("inputBufferPtr: ");
+    //Serial.println(inputBufferPtr);
+
     // CAT protocol comes in 5 bytes.
     // How to deal with misaligned reads?
     if( inputBufferPtr > 4 || (inputBufferPtr>INPUTBUFLEN)){
+      //Serial.println("Got 5 chars, parsing!");
       parseCAT(inputBuffer);
-    } else {
-      inputBuffer += inChar;
-      inputBufferPtr++;
+      inputBuffer = "";
+      inputBufferPtr = 0;
     }
-    inputBuffer = "";
-    inputBufferPtr = 0;
   }
 }
-
 
 // CAT Parser function
 int parseCAT(String input){
@@ -159,15 +164,19 @@ int parseCAT(String input){
     for any other command, without doing anything!
     
   */
-  
+
+  //Serial.println("Parsing CAT Command");
   switch(input[4]) {
   case CAT_FREQ_SET :
+    //Serial.println("Setting Frequency");
     setFreq(input);
     break;
   case CAT_RX_FREQ_CMD :
+    //Serial.println("Sending Frequency");
     sendFreq();
     break;
   default :
+    //Serial.println("In Default");
     sendAck();
     break;
   }
