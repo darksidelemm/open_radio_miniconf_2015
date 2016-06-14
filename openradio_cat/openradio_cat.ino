@@ -92,6 +92,7 @@ static void write_settings(void)
 //char inputBuffer[INPUTBUFLEN];
 int inputBufferPtr = 0;
 char tempBuffer[20]; // Buffer for string to int conversion.
+byte catPacket[5]; // CAT protocol Packet
 String inputBuffer = "";
 unsigned char * converted;
 
@@ -115,7 +116,6 @@ void setup(){
     digitalWrite(TX_RX_SWITCH, LOW);
 
     if (!read_settings()) {
-        //Serial.println(F("Resetting settings to defaults"));
         settings.magic = SETTINGS_MAGIC;
         settings.rx_freq = RX_FREQ;
         settings.tx_freq = TX_FREQ;
@@ -131,19 +131,17 @@ void setup(){
 void loop(){
   if(Serial.available()){
     char inChar = (char)Serial.read();
-    
-    //Serial.print("Got a Char: ");
-    //Serial.println(inChar);
+
     inputBuffer += inChar;
     inputBufferPtr++;
-    //Serial.print("inputBufferPtr: ");
-    //Serial.println(inputBufferPtr);
 
     // CAT protocol comes in 5 bytes.
     // How to deal with misaligned reads?
     if( inputBufferPtr > 4 || (inputBufferPtr>INPUTBUFLEN)){
-      //Serial.println("Got 5 chars, parsing!");
-      parseCAT(inputBuffer);
+      for (int i=0; i<5; i++) {
+	catPacket[i] = inputBuffer[i];
+      }
+      parseCAT(catPacket);
       inputBuffer = "";
       inputBufferPtr = 0;
     }
@@ -151,7 +149,7 @@ void loop(){
 }
 
 // CAT Parser function
-int parseCAT(String input){
+int parseCAT(byte *input){
   /*
     All CAT commands to the radio should be received as 5-byte blocks.
     The commands are generally in the form of: 
@@ -165,18 +163,14 @@ int parseCAT(String input){
     
   */
 
-  //Serial.println("Parsing CAT Command");
   switch(input[4]) {
   case CAT_FREQ_SET :
-    //Serial.println("Setting Frequency");
     setFreq(input);
     break;
   case CAT_RX_FREQ_CMD :
-    //Serial.println("Sending Frequency");
     sendFreq();
     break;
   default :
-    //Serial.println("In Default");
     sendAck();
     break;
   }
@@ -218,7 +212,7 @@ void sendFreq(void) {
 }   
 
 // Parse frequency, set SI5351 clock
-int setFreq(String input) {
+int setFreq(byte input[5]) {
   /*
     ----Set Frequency------------------------------------------------
     {0x00,0x00,0x00,0x00,CAT_FREQ_SET}
@@ -234,7 +228,7 @@ int setFreq(String input) {
 
   */
 
-  unsigned long result = 0;
+  uint32_t result = 0;
   byte rigFreq[4];
 
   for (int i=0; i < 4; i++) {
@@ -248,7 +242,6 @@ int setFreq(String input) {
     sendAck();
     return 0;
   }else{
-    //Serial.println("Invalid input.");
     sendErr();
     return -1;
   }	
