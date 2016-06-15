@@ -41,12 +41,11 @@
 #include "settings.h"
 #include "pins.h"
 #include "ring_buffer.h"
-#include "CAT.h"
 
 #define VERSION "0.3"
 
 // Default output frequency
-#define RX_FREQ 7090000
+#define RX_FREQ 7100000
 #define TX_FREQ 7090000
 #define FREQ_LIMIT_LOWER 100000
 #define FREQ_LIMIT_UPPER 30000000
@@ -92,7 +91,6 @@ static void write_settings(void)
 //char inputBuffer[INPUTBUFLEN];
 int inputBufferPtr = 0;
 char tempBuffer[20]; // Buffer for string to int conversion.
-byte catPacket[5]; // CAT protocol Packet
 String inputBuffer = "";
 unsigned char * converted;
 
@@ -135,13 +133,9 @@ void loop(){
     inputBuffer += inChar;
     inputBufferPtr++;
 
-    // CAT protocol comes in 5 bytes.
-    // How to deal with misaligned reads?
-    if( inputBufferPtr > 4 || (inputBufferPtr>INPUTBUFLEN)){
-      for (int i=0; i<5; i++) {
-	catPacket[i] = inputBuffer[i];
-      }
-      parseCAT(catPacket);
+    // Read until ';' seen, parse packet!
+    if( inChar == ';' || inChar == 0x0d ) {
+      parseCAT(inputBuffer);
       inputBuffer = "";
       inputBufferPtr = 0;
     }
@@ -149,145 +143,85 @@ void loop(){
 }
 
 // CAT Parser function
-int parseCAT(byte *input){
+int parseCAT(String input) {
   /*
-    All CAT commands to the radio should be received as 5-byte blocks.
-    The commands are generally in the form of: 
-    
-    {P1,P2,P3,P4,CMD}
-    where P1-P4 are parameters, usually in Binary Coded Decimal
-    and CMD is the command code, for all codes see CAT.h
-        
-    This only implements frequency control and sends an acknowledgement 
-    for any other command, without doing anything!
-    
+    Kenwood style CAT commands have a two character command, followed
+    optionally with paramters terminated by ';'.
+    Termination is handled in loop()
   */
 
-  switch(input[4]) {
-  case CAT_FREQ_SET :
-    setFreq(input);
-    break;
-  case CAT_RX_FREQ_CMD :
-    sendFreq();
-    break;
-  default :
-    sendAck();
-    break;
+  String cmd;
+  char freq[14];
+  
+  cmd = input.substring(0,2);
+  
+  if (cmd == "FA" || cmd == "FB") {
+    if (input.length() > 3) {
+      // We have parameters, 11 of them!!
+      setFreq(input.substring(2,13));
+    } else {
+      sprintf(freq, "FA%011lu", settings.rx_freq);
+      Serial.print(freq);
+      sendTerm();
+    }
+    return 0;
+  } else if (cmd == "ID") {
+    Serial.print("ID020");
+    sendTerm();
+    return 0;
+  } else if (cmd == "IF") {
+    /* send a bunch of stuff!
+       37 chars
+       P1: 11 digits freqency in Hz
+       P2: 5 spaces
+       P3: 5 digit RIT Freq
+       P4: 1 digit RIT Status
+       P5: 1 digit XIT Status
+       P6: 0
+       P7: 2 digit Mem channel (00-99)
+       P8: 1 digit TX status
+       P9: 1 char Operating Mode
+      P10: 1 char FT/FR
+      P11: 1 char Scan Status
+      P12: 1 digit Simplex Status
+      P13: 1 digit OFF/Tone/CTCSS
+      P14: 2 digit Tone Number
+      P15: 1 space
+
+    */
+
+    // send the freq, everything else off or zero, FSK mode
+    Serial.print("IF");
+    sprintf(freq, "%011lu", settings.rx_freq);
+    Serial.print(freq);
+    Serial.flush();
+    Serial.print("     000000000006000000 ");
+    Serial.flush();
+    sendTerm();
+       
   }
-  return 0;
+  return 1;
+}
+
+void sendTerm(void) {
+  Serial.print(';');
 }
 
 int freqValid(uint32_t freq){
 	return (freq>FREQ_LIMIT_LOWER) && (freq<FREQ_LIMIT_UPPER);
 }
 
-void sendAck(void) {
-  Serial.write(0x00);
-}
-
-void sendErr(void) {
-  Serial.write(0xF0);
-}
-
-void sendPacket(byte packet[5]) {
-  for (int i=0; i<5; i++) {
-    Serial.write(packet[i]);
+void setFreq (String freq) {
+  // Parse frequency, set SI5351 clock
+  
+  uint32_t result = freq.toInt();
+  
+  if(freqValid(result)){
+    set_rx_freq(result);
   }
-  Serial.flush();
   return;
 }
 
-void sendFreq(void) {
-  unsigned char tempWord[4];
-  byte rigFreq[5];
-  rigFreq[4] = CAT_MODE_DIG;
-  
-  converted = to_bcd_be(tempWord, settings.rx_freq, 8);
-  
-  for (byte i=0; i<4; i++){
-    rigFreq[i] = converted[i];
-  }
-  
-  sendPacket(rigFreq);
-}   
-
-// Parse frequency, set SI5351 clock
-int setFreq(byte input[5]) {
-  /*
-    ----Set Frequency------------------------------------------------
-    {0x00,0x00,0x00,0x00,CAT_FREQ_SET}
-    
-    Tune the radio to a frequency as: {P1,P2,P3,P4,0x01}
-    Parameters:
-    P1-P4 = frequency as: aa,bb,cc,dd
-    
-    Eg: {0x01,0x40,0x07,0x00,0x01} tunes to 14.070 MHz
-    Eg2:{0x14,0x43,0x90,0x00,0x01} tunes to 144.390MHz
-
-    Eg3;{0x00,0x70,0x90,0x00,0x01} tunes to 7 090 000 Hz
-
-  */
-
-  uint32_t result = 0;
-  byte rigFreq[4];
-
-  for (int i=0; i < 4; i++) {
-    rigFreq[i] = input[i];
-  }
-  
-  result = from_bcd_be(rigFreq, 8);
-
-  if(freqValid(result)){
-    set_rx_freq(result);
-    sendAck();
-    return 0;
-  }else{
-    sendErr();
-    return -1;
-  }	
-}
-
-
-// BCD functions
-// Taken from FT857D Libraries
-unsigned long from_bcd_be(const  byte bcd_data[], unsigned bcd_len)
-{
-	int i;
-	long f = 0;
-
-	for (i=0; i < bcd_len/2; i++) {
-		f *= 10;
-		f += bcd_data[i]>>4;
-		f *= 10;
-		f += bcd_data[i] & 0x0f;
-	}
-	if (bcd_len&1) {
-		f *= 10;
-		f += bcd_data[bcd_len/2]>>4;
-	}
-	return f;
-}
-
-unsigned char * to_bcd_be( unsigned char bcd_data[], unsigned long  freq, unsigned bcd_len)
-{
-	int i;
-	unsigned char a;
-
-	if (bcd_len&1) {
-		bcd_data[bcd_len/2] &= 0x0f;
-		bcd_data[bcd_len/2] |= (freq%10)<<4;
-/* NB: low nibble is left uncleared */
-		freq /= 10;
-	}
-	for (i=(bcd_len/2)-1; i >= 0; i--) {
-		a = freq%10;
-		freq /= 10;
-		a |= (freq%10)<<4;
-		freq /= 10;
-		bcd_data[i] = a;
-	}
-	return bcd_data;
-}
 
 // Si5351 Helper Functions
 //
