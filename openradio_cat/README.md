@@ -20,8 +20,8 @@ sets it to 7.090MHz
 
 TODO
 ====
-- [*] Get Started!
-- [*] Test on hardware
+- [X] Get Started!
+- [X] Test on hardware
 - [ ] Make it work on hardware
 - [ ] Test with CubicSDR
 - [ ] implement TX somehow.
