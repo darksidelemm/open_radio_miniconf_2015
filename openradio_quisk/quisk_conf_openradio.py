@@ -7,6 +7,10 @@
 # You will also need to install the pyserial package for python.
 #
 
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+
 
 # SOUND CARD SETTINGS
 #
@@ -32,18 +36,9 @@ openradio_upper = 29999999
 # OpenRadio Hardware Control Class
 #
 import serial,time
-#from quisk_hardware_model import Hardware as BaseHardware
+from quisk_hardware_model import Hardware as BaseHardware
 
-class Hardware:
-  def __init__(self, app, conf):
-    # We need to define a few of these default variables here. 
-    self.application = app      # Application instance (to provide attributes)
-    self.conf = conf        # Config file module
-    self.rf_gain_labels = ()    # Do not add the Rf Gain button
-    self.correct_smeter = conf.correct_smeter   # Default correction for S-meter
-    self.use_sidetone = 0     # Don't show the sidetone volume control
-    self.transverter_offset = 0
-
+class Hardware(BaseHardware):
   def open(self):
     # Called once to open the Hardware
     # Open the serial port.
@@ -53,6 +48,7 @@ class Hardware:
     time.sleep(2)
     # Poll for version. Should probably confirm the response on this.
     version = str(self.get_parameter("VER"))
+    print("This should be the version printed next.")
     print(version)
     # Return an informative message for the config screen
     t = version + ". Capture from sound card %s." % self.conf.name_of_sound_capt
@@ -78,6 +74,8 @@ class Hardware:
 
     success = self.set_parameter("FREQ",str(vfo))
 
+    print("sample_rate =")
+    print(sample_rate)
     # If the tune frequency is outside the RX bandwidth, set it to somewhere within that bandwidth.
     if(tune>(vfo + sample_rate/2) or tune<(vfo - sample_rate/2)):
       tune = vfo + 10000
@@ -85,67 +83,28 @@ class Hardware:
 
     if success:
       print("Frequency change succeeded!")
-      return tune, vfo
     else:
       print("Frequency change failed.")
-      return None, None
 
-  # Boilerplate functions, most of which return nothing.
-  def ReturnFrequency(self):
-    # Return the current tuning and VFO frequency.  If neither have changed,
-    # you can return (None, None).  This is called at about 10 Hz by the main.
-    # return (tune, vfo)  # return changed frequencies
-    return None, None   # frequencies have not changed
-  def ReturnVfoFloat(self):
-    # Return the accurate VFO frequency as a floating point number.
-    # You can return None to indicate that the integer VFO frequency is valid.
-    return None
-  def ChangeMode(self, mode):   # Change the tx/rx mode
-    # mode is a string: "USB", "AM", etc.
-    pass
-  def ChangeBand(self, band):
-    # band is a string: "60", "40", "WWV", etc.
-    try:
-      self.transverter_offset = self.conf.bandTransverterOffset[band]
-    except:
-      self.transverter_offset = 0
-  def OnBtnFDX(self, is_fdx):   # Status of FDX button, 0 or 1
-    pass
-  def HeartBeat(self):  # Called at about 10 Hz by the main
-    pass
-  # The "VarDecim" methods are used to change the hardware decimation rate.
-  # If VarDecimGetChoices() returns any False value, no other methods are called.
-  def VarDecimGetChoices(self): # Return a list/tuple of strings for the decimation control.
-    return False  # Return a False value for no decimation changes possible.
-  def VarDecimGetLabel(self): # Return a text label for the decimation control.
-    return ''
-  def VarDecimGetIndex(self): # Return the index 0, 1, ... of the current decimation.
-    return 0    # This is called before open() to initialize the control.
-  def VarDecimSet(self, index=None):  # Called when the control is operated.
-    # Change the decimation here, and return the sample rate.  The index is 0, 1, 2, ....
-    # Called with index == None before open() to set the initial sample rate.
-    # Note:  The last used value is available as self.application.vardecim_set if
-    #        the persistent state option is True.  If the value is unavailable for
-    #        any reason, self.application.vardecim_set is None.
-    return 48000
-  def VarDecimRange(self):  # Return the lowest and highest sample rate.
-    return (48000, 960000)
-
+    return tune, vfo
 
 #
 # Serial comms functions, to communicate with the OpenRadio board
 #
 
   def get_parameter(self,string):
-    self.or_serial.write(string+"\n")
+    string = string + "\n"
+    self.or_serial.write(string.encode())
     return self.get_argument()
+    #return string.encode()
         
   def set_parameter(self,string,arg):
-    self.or_serial.write(string+","+arg+"\n")
+    string = string+","+arg+"\n"
+    self.or_serial.write(string.encode())
     if self.get_argument() == arg:
       return True
     else:
-       return False
+      return False
     
   def get_argument(self):
     data1 = self.or_serial.readline()
@@ -154,16 +113,18 @@ class Hardware:
        return -1
         
     # Maybe we didn't catch an OK line?
-    if data1.startswith('OK'):
+    if data1.startswith(b'OK'):
        data1 = self.or_serial.readline()
         
     # Check to see if we have a comma in the string. If not, there is no argument.
-    if data1.find(',') == -1:
+    if data1.find(b',') == -1:
        return -1
     
-    data1 = data1.split(',')[1].rstrip('\r\n')
+    data1 = data1.split(b',')[1].rstrip(b'\r\n')
+    print("data1 =")
+    print(data1)
     
     # Check for the OK string
     data2 = self.or_serial.readline()
-    if data2.startswith('OK'):
+    if data2.startswith(b'OK'):
        return data1
