@@ -210,7 +210,7 @@ static int32_t get_freq(void)
     flush_input();
 
     Serial.print(F("Enter Frequency in kHz: "));
-    freq = Serial.parseInt();
+    freq = feedbackParseInt();
     Serial.println(freq);
 
     flush_input();
@@ -334,6 +334,22 @@ const uint16_t channel_list[] =
         9030, 9033, 9036, 9040, 9043, 9046, 9050, 9053, 9056, 9060, 9063, 9066, 9070,
         9073, 9076, 9080, 9083};
 
+
+int feedbackParseInt()
+{
+  int total=0;
+  int input=-1;
+  while(input = Serial.read()){
+  if (input >= 48 && input <= 57 ){
+  total = (input - 48) + (total * 10);
+  } 
+  else if (input != -1){
+     return total;
+  }
+  }
+}
+
+
 static void set_channel(void)
 {
     int32_t chan;
@@ -341,7 +357,7 @@ static void set_channel(void)
     flush_input();
 
     Serial.print(F("Enter channel number (1-30): "));
-    chan = Serial.parseInt();
+    chan = feedbackParseInt();
     Serial.println(chan);
 
     flush_input();
@@ -381,7 +397,7 @@ static void calibrate(void)
     flush_input();
 
     Serial.print(F("Enter reference frequnecy (Hz): "));
-    f0 = Serial.parseInt();
+    f0 = feedbackParseInt();
     Serial.println(f0);
 
     flush_input();
@@ -449,7 +465,7 @@ static void psk_rate_select_terminal(void)
         Serial.println(F("Select BPSK baud rate:\r\n"));
         Serial.println(F("\t31\r\n\t63\r\n\t125\r\n\t250\r\n\t500\r\n\t1000"));
 
-        long rate = Serial.parseInt();
+        long rate = feedbackParseInt();
         if (rate == 0)
                 rate = 31;
         Serial.println(rate);
@@ -496,7 +512,7 @@ static void psk_rate_select_beacon(void)
         Serial.println(F("Select BPSK baud rate:\r\n"));
         Serial.println(F("\t31\r\n\t63\r\n\t125\r\n\t250\r\n\t500\r\n\t1000"));
 
-        long rate = Serial.parseInt();
+        long rate = feedbackParseInt();
         if (rate == 0)
                 rate = 31;
         Serial.println(rate);
